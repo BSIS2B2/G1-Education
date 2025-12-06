@@ -14,9 +14,9 @@ if 'quiz_history' not in st.session_state:
     st.session_state.quiz_history = {}
 
 
-# ======================================
+
 # QUIZ MANAGEMENT
-# ======================================
+
 def quiz_management():
     st.header("Quiz Management")
     
@@ -151,11 +151,11 @@ def initialize_sample_data():
 
 
 
-# ======================================
+
 # TAKE QUIZ
-# ======================================
+
 def take_quiz():
-    st.header("📝 Take Quiz")
+    st.header("Take Quiz")
     
     student_name = st.text_input("Enter your name")
     
@@ -278,12 +278,12 @@ def submit_quiz(student_name):
     st.write(f"### Score: {score_percent:.1f}%")
     
     # Display per-question feedback
-    st.subheader("✅ Quiz Feedback")
+    st.subheader("Quiz Feedback")
     for f in feedback:
         st.write(f"**Question:** {f['question']}")
         st.write(f"- Your Answer: {f['your_answer']}")
         st.write(f"- Correct Answer: {f['correct_answer']}")
-        st.write(f"- {'Correct ✅' if f['is_correct'] else 'Incorrect ❌'}")
+        st.write(f"- {'Correct' if f['is_correct'] else 'Incorrect'}")
         st.markdown("---")
     
     st.session_state.current_quiz = {}
@@ -292,9 +292,9 @@ def submit_quiz(student_name):
 
 
 
-# ======================================
+
 # PERFORMANCE ANALYSIS
-# ======================================
+
 def performance_analysis():
     st.header("Performance Analysis")
     
@@ -327,9 +327,9 @@ def performance_analysis():
                 st.write(f"- {topic}: {avg:.1f}%")
 
 
-# ======================================
+
 # LEADERBOARD
-# ======================================
+
 def leaderboard():
     st.header("Leaderboard")
     
@@ -347,9 +347,9 @@ def leaderboard():
     st.dataframe(df, hide_index=True, use_container_width=True)
 
 
-# ======================================
+
 # MAIN APP
-# ======================================
+
 def main():
     st.set_page_config(page_title="Adaptive Quiz System", layout="wide")
     st.title("Adaptive Quiz Generator & Student Performance Analyzer")
