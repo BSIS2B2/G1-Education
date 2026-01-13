@@ -2,8 +2,19 @@ import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
+from datetime import datetime
+
+def format_duration(seconds):
+    """Format time to MM:SS or HH:MM:SS"""
+    hours = seconds // 3600
+    minutes = (seconds % 3600) // 60
+    secs = seconds % 60
+    if hours > 0:
+        return f"{hours:02d}:{minutes:02d}:{secs:02d}"
+    return f"{minutes:02d}:{secs:02d}"
 
 def draw_gauge_chart(percentage, topic_name):
+    """Render Plotly gauge indicator"""
     fig = go.Figure(go.Indicator(
         mode = "gauge+number",
         value = percentage,
@@ -26,19 +37,80 @@ def draw_gauge_chart(percentage, topic_name):
     return fig
 
 def performance_analysis():
+    """Main analytics dashboard logic"""
     if not st.session_state.quiz_history:
         st.info("No data available. Complete an assessment to see analytics.")
         return
 
     df = pd.DataFrame(st.session_state.quiz_history)
-    selected_user = st.selectbox("Select Student Profile", df["student"].unique())
-    user_df = df[df["student"] == selected_user]
-
-    st.markdown(f"### Performance Metrics for {selected_user}")
     
-    # Gauge Charts for Topic Mastery
+    # Selection header
+    st.markdown('<h3 style="text-align: center; font-weight: bold;">SELECT ANALYTICS PROFILE</h3>', unsafe_allow_html=True)
+    
     st.markdown('<div class="custom-card">', unsafe_allow_html=True)
-    st.markdown("#### Topic Mastery Level")
+    selected_user = st.selectbox("Choose user", df["student"].unique(), label_visibility="collapsed")
+    
+    user_df = df[df["student"] == selected_user].copy()
+    
+    # Export data preparation
+    export_df = user_df.copy()
+    
+    def calculate_mastery_plain(pct):
+        if pct >= 90: return "Master"
+        if pct >= 75: return "Proficient"
+        if pct >= 50: return "Developing"
+        return "Novice"
+    
+    export_df['Mastery Level'] = export_df['percentage'].apply(calculate_mastery_plain)
+    export_df['time_taken'] = export_df['time_taken'].apply(format_duration)
+
+    def format_to_ampm(date_str):
+        try:
+            dt = datetime.strptime(date_str, "%Y-%m-%d %H:%M")
+            return dt.strftime("%Y-%m-%d %I:%M %p")
+        except:
+            return date_str
+            
+    export_df['date'] = export_df['date'].apply(format_to_ampm)
+    export_df.columns = [col.upper() for col in export_df.columns]
+
+    # Export functionality
+    csv = export_df.to_csv(index=False).encode('utf-8')
+    st.download_button(
+        label=f"Export Full Analytics for {selected_user} (CSV)",
+        data=csv,
+        file_name=f"QuizLearn_Analytics_{selected_user}.csv",
+        mime='text/csv',
+        use_container_width=True
+    )
+
+    # --- NEW: EXPORT ALL SECTION ---
+    st.markdown('<div style="text-align: center; margin: 10px 0; opacity: 0.6; font-weight: 600;">— or —</div>', unsafe_allow_html=True)
+    
+    all_export_df = df.copy()
+    all_export_df['Mastery Level'] = all_export_df['percentage'].apply(calculate_mastery_plain)
+    all_export_df['time_taken'] = all_export_df['time_taken'].apply(format_duration)
+    all_export_df['date'] = all_export_df['date'].apply(format_to_ampm)
+    all_export_df.columns = [col.upper() for col in all_export_df.columns]
+    
+    csv_all = all_export_df.to_csv(index=False).encode('utf-8')
+    st.download_button(
+        label="Export Full Analytics for ALL Users (CSV)",
+        data=csv_all,
+        file_name="QuizLearn_Global_Analytics.csv",
+        mime='text/csv',
+        use_container_width=True
+    )
+    # -------------------------------
+
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    # Performance metrics section
+    st.markdown(f'<h2 style="text-align: center; font-weight: bold;">PERFORMANCE METRICS FOR {selected_user.upper()}</h2>', unsafe_allow_html=True)
+    
+    # Topic mastery gauges
+    st.markdown('<div class="custom-card">', unsafe_allow_html=True)
+    st.markdown('<h4 style="text-align: center; font-weight: bold;">TOPIC MASTERY LEVEL</h4>', unsafe_allow_html=True)
     topic_summary = user_df.groupby("topic")["percentage"].mean().reset_index()
     gauge_cols = st.columns(len(topic_summary))
     
@@ -47,15 +119,17 @@ def performance_analysis():
             st.plotly_chart(draw_gauge_chart(row['percentage'], row['topic']), use_container_width=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # Historical Line Chart
+    # Score progression chart
     st.markdown('<div class="custom-card">', unsafe_allow_html=True)
-    st.markdown("#### Score Progression Over Time")
-    line_fig = px.line(user_df, x="date", y="percentage", markers=True, template="plotly_dark")
+    st.markdown('<h4 style="text-align: center; font-weight: bold;">SCORE PROGRESSION OVER TIME</h4>', unsafe_allow_html=True)
+    
+    user_df['date_display'] = user_df['date'].apply(format_to_ampm)
+    line_fig = px.line(user_df, x="date_display", y="percentage", markers=True, template="plotly_dark")
     line_fig.update_traces(line_color='#a855f7', marker=dict(size=10))
     line_fig.update_layout(
         paper_bgcolor='rgba(0,0,0,0)',
         plot_bgcolor='rgba(0,0,0,0)',
-        xaxis_title="Date of Assessment",
+        xaxis_title="Date and Time",
         yaxis_title="Percentage Score"
     )
     st.plotly_chart(line_fig, use_container_width=True)
