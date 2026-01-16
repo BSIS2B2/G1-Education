@@ -7,7 +7,6 @@ def confirm_exit_dialog():
     """Centered confirmation modal for session termination"""
     accent_color = st.session_state.get('active_accent', '#4f46e5')
     
-    # CSS for dialog curvature and ensuring both buttons look identical
     st.markdown(f"""
         <div style="text-align: center; padding-bottom: 10px;">
             <p style="font-size: 1.1rem; font-weight: 500; opacity: 0.9;">
@@ -17,7 +16,7 @@ def confirm_exit_dialog():
         <style>
             div[data-testid="stDialog"] button {{ 
                 border-radius: 12px !important;
-                border: none !important; /* Ensure both have no borders */
+                border: none !important;
             }}
         </style>
     """, unsafe_allow_html=True)
@@ -37,7 +36,6 @@ def take_quiz():
     """Main quiz controller: Handles Login, Setup, and Active Assessment"""
     accent_color = st.session_state.get('active_accent', '#4f46e5')
 
-    # Student Login Logic
     if "active_student" not in st.session_state:
         st.markdown('<div class="custom-card">', unsafe_allow_html=True)
         name_input = st.text_input("Enter Student Name", placeholder="Type your name here")
@@ -55,7 +53,6 @@ def take_quiz():
         
         st.session_state.active_student = name_input
         
-        # Greeting Pool Management
         all_greetings = ["Welcome", "Great to see you", "Greetings", "Good luck today", "Ready to learn"]
         if "greeting_pool" not in st.session_state or not st.session_state.greeting_pool:
             st.session_state.greeting_pool = all_greetings.copy()
@@ -66,7 +63,6 @@ def take_quiz():
             st.session_state.students.append({"id": len(st.session_state.students)+1, "name": name_input})
         st.rerun()
 
-    # Session Header & Exit Trigger
     name = st.session_state.active_student.title()
     greeting = st.session_state.current_greeting
     st.markdown('<div class="custom-card">', unsafe_allow_html=True)
@@ -80,7 +76,6 @@ def take_quiz():
 
     quiz = st.session_state.get("current_quiz", None)
 
-    # Quiz Configuration Stage
     if quiz is None:
         st.markdown('<div class="custom-card">', unsafe_allow_html=True)
         st.markdown("### Configure Session")
@@ -106,7 +101,6 @@ def take_quiz():
         st.markdown('</div>', unsafe_allow_html=True)
         return
 
-    # Active Assessment Interface
     if not quiz["is_completed"]:
         st.markdown(f"### {quiz['topic']} Assessment")
         
@@ -124,7 +118,6 @@ def take_quiz():
         st.markdown(f"<style>div[data-testid='stProgress'] > div > div > div > div {{ background-color: {diff_accent} !important; }}</style>", unsafe_allow_html=True)
         st.progress(answered_count / total_questions)
         
-        # Question Rendering Loop
         for i, q in enumerate(quiz["questions"]):
             user_ans = st.session_state.get(f"q_idx_{i}")
             quiz["answers"][i] = user_ans
@@ -137,7 +130,6 @@ def take_quiz():
             st.markdown(f'<div class="custom-card {anim_class}">', unsafe_allow_html=True)
             st.markdown(f"**Question {i+1}**")
             
-            # Radio theme overrides
             st.markdown(f"<style>div[role='radiogroup'] > label > div:first-child {{ border-color: {accent_color} !important; }} "
                         f"div[role='radiogroup'] > label > div:first-child > div {{ background-color: {accent_color} !important; }}</style>", 
                         unsafe_allow_html=True)
@@ -150,7 +142,6 @@ def take_quiz():
                 else: st.error(f"Incorrect. Answer: {correct_ans}")
             st.markdown('</div>', unsafe_allow_html=True)
 
-        # Validation & Submission
         if not quiz["show_results"]:
             if st.button("Validate Answers"):
                 quiz["show_results"] = True
@@ -158,31 +149,60 @@ def take_quiz():
         else:
             if st.button("Submit to Hall of Fame"):
                 score = sum(1 for i, q in enumerate(quiz["questions"]) if quiz["answers"].get(i) == (q.get("correct_answer") or q.get("correct")))
+                student_attempts = [r for r in st.session_state.quiz_history if r['student'] == quiz["student"] and r['topic'] == quiz["topic"]]
+                attempt_num = len(student_attempts) + 1
+                
                 result = {
                     "student": quiz["student"], "topic": quiz["topic"], "difficulty": quiz["difficulty"],
-                    "score": score, "total": len(quiz["questions"]), "percentage": round((score/len(quiz["questions"]))*100),
-                    "date": datetime.now().strftime("%Y-%m-%d %H:%M"), "time_taken": (datetime.now() - quiz["start_time"]).seconds
+                    "score": score, "total_questions": len(quiz["questions"]), "percentage": round((score/len(quiz["questions"]))*100),
+                    "date": datetime.now().strftime("%Y-%m-%d %H:%M"), "time_taken": (datetime.now() - quiz["start_time"]).seconds,
+                    "attempt": attempt_num
                 }
                 st.session_state.quiz_history.append(result)
                 quiz["is_completed"] = True
                 st.rerun()
     
-    # Post-Quiz Summary
     else:
-        res = st.session_state.quiz_history[-1]
-        st.markdown('<div class="custom-card">', unsafe_allow_html=True)
-        st.markdown("### Assessment Summary")
-        col1, col2, col3 = st.columns(3)
-        col1.metric("Final Score", f"{res['score']} / {res['total']}")
-        col2.metric("Accuracy", f"{res['percentage']}%")
-        col3.metric("Duration", f"{res['time_taken']}s")
-        
-        if res['percentage'] >= 60: st.success("Status: Passed")
-        else: st.error("Status: Failed")
+        current_student = quiz["student"]
+        student_still_exists = any(r['student'] == current_student for r in st.session_state.quiz_history)
+
+        if st.session_state.quiz_history and student_still_exists:
+            student_records = [r for r in st.session_state.quiz_history if r['student'] == current_student]
+            res = student_records[-1]
+            st.markdown('<div class="custom-card">', unsafe_allow_html=True)
+            st.markdown("### Assessment Summary")
+            col1, col2, col3 = st.columns(3)
+            col1.metric("Final Score", f"{res['score']} / {res['total_questions']}")
+            col2.metric("Accuracy", f"{res['percentage']}%")
+            col3.metric("Duration", f"{res['time_taken']}s")
             
-        if st.button("Start New Session"):
-            for key in list(st.session_state.keys()):
-                if key.startswith("q_idx_"): del st.session_state[key]
-            st.session_state.current_quiz = None
-            st.rerun()
-        st.markdown('</div>', unsafe_allow_html=True)
+            if res['percentage'] >= 60: st.success("Status: Passed")
+            else: st.error("Status: Failed")
+                
+            if st.button("Start New Session"):
+                for key in list(st.session_state.keys()):
+                    if key.startswith("q_idx_"): del st.session_state[key]
+                st.session_state.current_quiz = None
+                st.rerun()
+            st.markdown('</div>', unsafe_allow_html=True)
+        else:
+            # UPDATED: Bright Red Action Required Box
+            st.markdown(f"""
+                <div style="
+                    background-color: #ff4b4b1a; 
+                    border: 1px solid #ff4b4b4d; 
+                    border-left: 5px solid #ff4b4b; 
+                    padding: 1rem; 
+                    border-radius: 8px;
+                    margin-bottom: 20px;
+                ">
+                    <div style="font-weight: 700; color: #ff4b4b;">Action Required</div>
+                    <div style="opacity: 0.9; color: #ffffff;">Assessment record not found. It may have been removed from the system.</div>
+                </div>
+            """, unsafe_allow_html=True)
+            
+            if st.button("Reset Session"):
+                for key in list(st.session_state.keys()):
+                    if key.startswith("q_idx_"): del st.session_state[key]
+                st.session_state.current_quiz = None
+                st.rerun()

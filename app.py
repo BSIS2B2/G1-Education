@@ -3,6 +3,7 @@ from state import init_session_state
 from take_quiz import take_quiz
 from analysis import performance_analysis
 from leaderboard import leaderboard
+from manage_students import student_management  # New Import
 
 # Page Configuration
 st.set_page_config(
@@ -164,12 +165,14 @@ st.markdown('<div class="app-title">QuizLearn</div>', unsafe_allow_html=True)
 st.markdown('<div class="subtitle">Master your craft through interactive assessment.</div>', unsafe_allow_html=True)
 st.markdown('<div class="thin-divider"></div>', unsafe_allow_html=True)
 
-# Main Application Routing
-tabs = st.tabs(["Assessment", "Analytics", "Hall of Fame"])
+# Main Application Routing - Updated with "Student Management"
+tabs = st.tabs(["Assessment", "Student Management", "Analytics", "Hall of Fame"])
 
 with tabs[0]:
     take_quiz()
 with tabs[1]:
-    performance_analysis()
+    student_management() # New routing call
 with tabs[2]:
+    performance_analysis()
+with tabs[3]:
     leaderboard()

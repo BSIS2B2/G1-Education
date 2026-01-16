@@ -38,8 +38,26 @@ def draw_gauge_chart(percentage, topic_name):
 
 def performance_analysis():
     """Main analytics dashboard logic"""
+    # Header locked to white for consistency
+    st.markdown('<h2 style="color: #FFFFFF; font-weight: 700;">Performance Analytics</h2>', unsafe_allow_html=True)
+
     if not st.session_state.quiz_history:
-        st.info("No data available. Complete an assessment to see analytics.")
+        # REPLACED st.info with Bright Red Action Required Box
+        st.markdown(f"""
+            <div style="
+                background-color: #ff4b4b1a; 
+                border: 1px solid #ff4b4b4d; 
+                border-left: 5px solid #ff4b4b; 
+                padding: 1rem; 
+                border-radius: 8px;
+                margin: 10px 0;
+            ">
+                <div style="font-weight: 700; color: #ff4b4b;">Action Required</div>
+                <div style="opacity: 0.9; color: #ffffff;">
+                    No data available. Complete an assessment to see analytics.
+                </div>
+            </div>
+        """, unsafe_allow_html=True)
         return
 
     df = pd.DataFrame(st.session_state.quiz_history)
